@@ -442,26 +442,33 @@ void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //m
     int **playerBoard, **computerBoard, **playerDiscovered, **computerDiscovered, pShipsDown = 0, cShipsDown = 0;
     int keyPressed = 0, i, buttonRow = 1, buttonNumber = 4, quit = 0, gameStarted = 0;
     int *pShipsUp, *cShipsUp;
-    char buttonText[5][15];
+    char **buttonText;
 
     //alocarea memoriei
     playerBoard = malloc(12 * sizeof(int *));
     computerBoard = malloc(12 * sizeof(int *));
     playerDiscovered = malloc(12 * sizeof(int *));
     computerDiscovered = malloc(12 * sizeof(int *));
-    pShipsUp = malloc(5 * sizeof(int));
-    cShipsUp = malloc(5 * sizeof(int));
     for(i = 0; i < 12; i++) {
         playerBoard[i] = malloc(12 * sizeof(int));
         computerBoard[i] = malloc(12 * sizeof(int));
         playerDiscovered[i] = malloc(12 * sizeof(int));
         computerDiscovered[i] = malloc(12 * sizeof(int));
     }
+    pShipsUp = malloc(5 * sizeof(int));
+    cShipsUp = malloc(5 * sizeof(int));
+    buttonText = malloc(5 * sizeof(char *));
+    for(i = 0; i < 5; i++) {
+        buttonText[i] = malloc(15 * sizeof(char));
+    }
 
     strcpy(buttonText[1], "New Game");
     strcpy(buttonText[2], "Continue Game");
     strcpy(buttonText[3], "Scores");
     strcpy(buttonText[4], "Quit");
+    for(i = 1; i < 5; i++) {
+        buttonText[i] = realloc(buttonText[i], (strlen(buttonText[i]) + 1) * sizeof(char));
+    }
     while (!quit) {
         if (keyPressed != 0) {
             keyPressed = waitForInput();
@@ -523,6 +530,10 @@ void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //m
     free(computerDiscovered);
     free(pShipsUp);
     free(cShipsUp);
+    for(i = 0; i < 5; i++) {
+        free(buttonText[i]);
+    }
+    free(buttonText);
 }
 
 void placeShip(int **board, int row, int col, int length, int direction) { //plaseaza nava pe tabla
