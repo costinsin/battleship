@@ -459,14 +459,14 @@ void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //m
     cShipsUp = malloc(5 * sizeof(int));
     buttonText = malloc(5 * sizeof(char *));
     for(i = 0; i < 5; i++) {
-        buttonText[i] = malloc(15 * sizeof(char));
+        buttonText[i] = calloc(15, sizeof(char));
     }
 
     strcpy(buttonText[1], "New Game");
     strcpy(buttonText[2], "Continue Game");
     strcpy(buttonText[3], "Scores");
     strcpy(buttonText[4], "Quit");
-    for(i = 1; i < 5; i++) {
+    for(i = 0; i < 5; i++) {
         buttonText[i] = realloc(buttonText[i], (strlen(buttonText[i]) + 1) * sizeof(char));
     }
     while (!quit) {
