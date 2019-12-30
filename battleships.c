@@ -4,13 +4,17 @@
 #include<stdlib.h>
 #include<unistd.h>
 
+typedef struct{
+    int row, col;
+}coord;
+
 int attack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int withSleep, int *ShipsUp);
 int calculateScore(int **board, int **boardDiscovered);
-void chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard);
+int chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard);
 void copyBoard(char nume_fis[], int **playerBoard);
 int destroyInAdvance(int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int * pShipsDown, int * cShipsDown, int *pShipsUp, int *cShipsUp);
 void drawBackground(int maxrow, int maxcol);
-void drawLogo(int maxrow, int maxcol);
+void drawLogo(int maxrow, int maxcol, int logoNumber);
 void drawUI(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown);
 void endScreen(int win, int score, int maxrow, int maxcol);
 void generateBoard(int **board);
@@ -20,11 +24,12 @@ WINDOW *initWindow(int *maxrow, int *maxcol);
 void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]);
 void placeShip(int **board, int row, int col, int length, int direction);
 void randomizeMap(int **board, int **boardDiscovered, int *ShipsUp);
-int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp);
+int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp, int difficulty);
 void saveScore(int score, char *name);
 int scanField(int **board, int row, int col, int length, int direction);
 void sleepOwn(int seconds);
-int startNewGame(WINDOW *wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp);
+int smartAttack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int *ShipsUp, int *hit, coord *lastHit);
+int startNewGame(WINDOW *wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp, int difficulty);
 int takeDown(int row, int col, int **board, int **boardDiscovered, int precRow, int precCol);
 int waitForInput(void);
 int wasTakenDown(int row, int col, int **board, int **boardDiscovered, int precRow, int precCol);
@@ -57,7 +62,7 @@ int attack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, 
     if (board[row][col] == 0)
         *playerTurn = 1;
     if (wasTakenDown(row, col, board, boardDiscovered, -1, -1) == 1 && board[row][col] == 1) {
-        (*ShipsDown) ++;
+        (*ShipsDown)++;
         ShipsUp[takeDown(row, col, board, boardDiscovered, -1, -1)]--;
     }
     if (withSleep)
@@ -80,18 +85,24 @@ int calculateScore(int **board, int **boardDiscovered) { //calculeaza scorul pla
     return score;
 }
 
-void chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard) { //meniul de ales al hartii
-    int index = 1, chosen = 0, i, j, keyPressed = 0, canBeChosen;
-    char *line, *chooseMapText, *aux;
+int chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard) { //meniul de ales al hartii
+    int index = 1, chosen = 0, i, j, keyPressed = 0, canBeChosen, difficulty = 0;
+    char *line, *chooseMapText, *difficultyText, *aux;
     FILE *map;
 
     chooseMapText = malloc(30 * sizeof(char));
+    difficultyText = malloc(30 * sizeof(char));
     strcpy(chooseMapText, "Choose your map:");
     while (!chosen) {
         drawBackground(maxrow, maxcol);
+        if(!difficulty)
+            sprintf(difficultyText, "Difficulty: EASY");
+        else
+            sprintf(difficultyText, "Difficulty: HARD");
         attron(COLOR_PAIR(5));
         mvprintw(maxrow / 2 - 8, maxcol / 2 - strlen(chooseMapText) / 2, chooseMapText);
-        mvprintw(maxrow-1, 0, "Side Arrows- Navigate maps");
+        mvprintw(maxrow / 2 + 7, maxcol / 2 - strlen(difficultyText) / 2, difficultyText);
+        mvprintw(maxrow-1, 0, "Side Arrows - Navigate maps | Up and Down Arrows - Change difficulty");
         map = fopen(argv[index], "r");
         if(map == NULL) { //se verifica daca fisierul-harta exista
             aux = malloc(30 * sizeof(char));
@@ -121,6 +132,12 @@ void chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int 
         }
         keyPressed = waitForInput();
         switch (keyPressed) { //decizie in functie de tasta apasata
+        case 1: //Up-Arrow
+            difficulty = 1 - difficulty;
+            break;
+        case 2: //Down-Arrow
+            difficulty = 1 - difficulty;
+            break;
         case 3: //Right-Arrow
             if (index < argc - 1)
                 index++;
@@ -138,6 +155,7 @@ void chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int 
         }
     }
     free(chooseMapText);
+    return difficulty;
 }
 
 void copyBoard(char nume_fis[], int **playerBoard) { //se copiaza tabla de joc dintr-un fisier
@@ -187,24 +205,38 @@ void drawBackground(int maxrow, int maxcol) { //deseneaza fundalul cu culoarea g
             mvaddch(i, j, ' ');
 }
 
-void drawLogo(int maxrow, int maxcol) { //deseneaza logo-ul din meniul principal
+void drawLogo(int maxrow, int maxcol, int logoNumber) { //deseneaza logo-ul din meniul principal
     FILE *logo;
-    char *s;
+    char *line;
     int colStart, rowStart = 3, i, j = 0;
 
-    s = malloc(100 * sizeof(char));
+    line = malloc(100 * sizeof(char));
     logo = fopen("logo.in", "r"); //se foloseste un fisier in care exista o imagine a logo-ului
-    colStart = (maxcol - 43) / 2;
-    attron(COLOR_PAIR(3));
-    while (fgets(s, 45, logo) != NULL) {
-        s = realloc(s, (strlen(s)+1) * sizeof(char));
-        for (i = 0; i < strlen(s); i++)
-            if (s[i] == '@')
-                mvaddch(rowStart + j, colStart + i, ' ');
-        j++;
-        s = realloc(s, 100 * sizeof(char));
+    colStart = (maxcol - 39) / 2;
+    if(logoNumber == 0) {
+        attron(COLOR_PAIR(3));
+        while (fgets(line, 45, logo) != NULL && j <= 6) {
+            line = realloc(line, (strlen(line)+1) * sizeof(char));
+            for (i = 0; i < strlen(line); i++)
+                if (line[i] == '@')
+                    mvaddch(rowStart + j, colStart + i, ' ');
+            j++;
+            line = realloc(line, 100 * sizeof(char));
+        }
+    } else {
+        attron(COLOR_PAIR(3));
+        for(i = 0; i <= 7; i++)
+            fgets(line, 45, logo);
+        while (fgets(line, 45, logo) != NULL) {
+            line = realloc(line, (strlen(line)+1) * sizeof(char));
+            for (i = 0; i < strlen(line); i++)
+                if (line[i] == '@')
+                    mvaddch(rowStart + j, colStart + i, ' ');
+            j++;
+            line = realloc(line, 100 * sizeof(char));
+        }
     }
-    free(s);
+    free(line);
 }
 
 void drawUI(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown) { //functie care se ocupa de desenarea UI-ului
@@ -396,9 +428,8 @@ void highscores(int maxrow, int maxcol) { //un meniu care afiseaza highscore-uri
     line = malloc(10 * sizeof(char));
     score = malloc(20 * sizeof(char));
     drawBackground(maxrow, maxcol);
+    drawLogo(maxrow, maxcol, 1);
     scores = fopen("scores", "r");
-    attron(COLOR_PAIR(1));
-    mvprintw(i - 2, maxcol / 2 - strlen("HIGHSCORES") / 2, "HIGHSCORES");
     attron(COLOR_PAIR(5));
     mvprintw(maxrow - 1, 0, "ENTER - Continue");
     while (fgets(line, 10, scores) && (i - maxrow / 2 + 5 <= 5)) {
@@ -441,7 +472,7 @@ WINDOW *initWindow(int *maxrow, int *maxcol) { //initializeaza fereastra gasindu
 void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //meniul principal
     int **playerBoard, **computerBoard, **playerDiscovered, **computerDiscovered, pShipsDown = 0, cShipsDown = 0;
     int keyPressed = 0, i, buttonRow = 1, buttonNumber = 4, quit = 0, gameStarted = 0;
-    int *pShipsUp, *cShipsUp;
+    int *pShipsUp, *cShipsUp, difficulty;
     char **buttonText;
 
     //alocarea memoriei
@@ -475,7 +506,7 @@ void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //m
         } else {
             keyPressed = -1;
             drawBackground(maxrow, maxcol);
-            drawLogo(maxrow, maxcol);
+            drawLogo(maxrow, maxcol, 0);
         }
         if (keyPressed == 1 && buttonRow > 1)
             buttonRow--;
@@ -498,13 +529,13 @@ void mainMenu(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[]) { //m
         if (keyPressed == 5) {
             switch (buttonRow) {
             case 1: //NEW GAME
-                chooseMap(wnd, maxrow, maxcol, argc, argv, playerBoard);
-                gameStarted = startNewGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, & pShipsDown, & cShipsDown, pShipsUp, cShipsUp);
+                difficulty = chooseMap(wnd, maxrow, maxcol, argc, argv, playerBoard);
+                gameStarted = startNewGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, &pShipsDown, &cShipsDown, pShipsUp, cShipsUp, difficulty);
                 keyPressed = 0;
                 break;
             case 2: //CONTIUNE GAME
                 if (gameStarted)
-                    gameStarted = resumeGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, & pShipsDown, & cShipsDown, pShipsUp, cShipsUp);
+                    gameStarted = resumeGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, &pShipsDown, &cShipsDown, pShipsUp, cShipsUp, difficulty);
                 keyPressed = 0;
                 break;
             case 3: //SCORES
@@ -584,9 +615,10 @@ void randomizeMap(int **board, int **boardDiscovered, int *ShipsUp) { //amesteca
     }
 }
 
-int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp) { //functia principala a jocului
-    int win = 0, pause = 0, keyPressed = 0;
+int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp, int difficulty) { //functia principala a jocului
+    int win = 0, pause = 0, keyPressed = 0, hit = 0;
     int playerTurn = 1, cursorRow = 1, cursorCol = 1;
+    coord lastHit;
 
     clear();
     drawBackground(maxrow, maxcol); //deseneaza fundalul
@@ -645,7 +677,10 @@ int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **co
             attron(COLOR_PAIR(5));
             mvprintw(maxrow / 4, maxcol / 2 - strlen("Computer is choosing...") / 2, "Computer is choosing...");
             refresh();
-            attack(playerBoard, playerDiscovered, &playerTurn, pShipsDown, 1, pShipsUp);
+            if(!difficulty)
+                attack(playerBoard, playerDiscovered, &playerTurn, pShipsDown, 1, pShipsUp);
+            else
+                smartAttack(playerBoard, playerDiscovered, &playerTurn, pShipsDown, pShipsUp, &hit, &lastHit);
             if ((*pShipsDown) >= 10)
                 win = 2;
             keyPressed = 0;
@@ -765,7 +800,56 @@ void sleepOwn(int seconds) { //functie de sleep
     while (time(NULL) - a < seconds);
 }
 
-int startNewGame(WINDOW *wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp) { //functie care se apeleaza doar la inceputul unui joc
+int smartAttack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int *ShipsUp, int *hit, coord *lastHit) { //functie de generare a unui atac random pe harta
+    int r, c;
+    if (*hit) {
+        if (!boardDiscovered[lastHit -> row + 1][lastHit -> col] && (lastHit -> row) + 1 <= 10) {
+            r = (lastHit -> row) + 1;
+            c = lastHit -> col;
+        } else if (!boardDiscovered[lastHit -> row - 1][lastHit -> col] && (lastHit -> row) - 1 >= 1) {
+            r = (lastHit -> row) - 1;
+            c = lastHit -> col;
+        } else if (!boardDiscovered[lastHit -> row][lastHit -> col + 1] && (lastHit -> col) + 1 <= 10) {
+            r = lastHit -> row;
+            c = (lastHit -> col) + 1;
+        } else if (!boardDiscovered[lastHit -> row][lastHit -> col - 1] && (lastHit -> col) - 1 >= 1) {
+            r = lastHit -> row;
+            c = (lastHit -> col) - 1;
+        } else {
+            *hit = 0;
+            r = genRandNumber(1, 10);
+            c = genRandNumber(1, 10);
+            while (boardDiscovered[r][c]) { //se cauta un punct nedescoperit
+                r = genRandNumber(1, 10);
+                c = genRandNumber(1, 10);
+            }
+        }
+    } else {
+        r = genRandNumber(1, 10);
+        c = genRandNumber(1, 10);
+        while (boardDiscovered[r][c]) { //se cauta un punct nedescoperit
+            r = genRandNumber(1, 10);
+            c = genRandNumber(1, 10);
+        }
+    }
+    boardDiscovered[r][c] = 1;
+    if (board[r][c] == 0)
+        *playerTurn = 1;
+    else {
+        *hit = 1;
+        lastHit -> row = r;
+        lastHit -> col = c;
+    }
+    if (wasTakenDown(r, c, board, boardDiscovered, -1, -1) == 1 && board[r][c] == 1) {
+        (*ShipsDown)++;
+        ShipsUp[takeDown(r, c, board, boardDiscovered, -1, -1)]--;
+        *hit = 0;
+    }
+    sleepOwn(1);
+    return board[r][c]; //reurneaza daca punctul atacat este o barca sau nu
+}
+
+int startNewGame(WINDOW *wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown, int *pShipsUp, int *cShipsUp, int difficulty) { //functie care se apeleaza doar la inceputul unui joc
     int i, j;
 
     for (i = 0; i <= 11; i++) //se initializeaza tablele de joc
@@ -780,7 +864,7 @@ int startNewGame(WINDOW *wnd, int maxrow, int maxcol, int **playerBoard, int **c
     pShipsUp[3] = cShipsUp[3] = 2;
     pShipsUp[4] = cShipsUp[4] = 1;
     generateBoard(computerBoard); //se genereaza tabla de joc a computer-ului random
-    return resumeGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, pShipsDown, cShipsDown, pShipsUp, cShipsUp); //se da resume jocului de-abia initializat
+    return resumeGame(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, pShipsDown, cShipsDown, pShipsUp, cShipsUp, difficulty); //se da resume jocului de-abia initializat
 }
 
 int takeDown(int row, int col, int **board, int **boardDiscovered, int precRow, int precCol) { //distruge barca si returneaza lungimea ei
