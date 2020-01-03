@@ -10,6 +10,7 @@ typedef struct{
 
 int attack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int withSleep, int *ShipsUp);
 int calculateScore(int **board, int **boardDiscovered);
+int checkDiag(int **board, int **boardDiscovered, int r, int c);
 int chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard);
 void copyBoard(char nume_fis[], int **playerBoard);
 int destroyInAdvance(int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int * pShipsDown, int * cShipsDown, int *pShipsUp, int *cShipsUp);
@@ -66,7 +67,7 @@ int attack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, 
         ShipsUp[takeDown(row, col, board, boardDiscovered, -1, -1)]--;
     }
     if (withSleep)
-        sleepOwn(3);
+        sleepOwn(1);
     return board[row][col]; //reurneaza daca punctul atacat este o barca sau nu
 }
 
@@ -83,6 +84,26 @@ int calculateScore(int **board, int **boardDiscovered) { //calculeaza scorul pla
             }
         }
     return score;
+}
+
+int checkDiag(int **board, int **boardDiscovered, int r, int c) {
+    if(board[r + 1][c + 1] != 0 && boardDiscovered[r + 1][c + 1] == 1)
+        return 0;
+    if(board[r - 1][c - 1] != 0 && boardDiscovered[r - 1][c - 1] == 1)
+        return 0;
+    if(board[r + 1][c - 1] != 0 && boardDiscovered[r + 1][c - 1] == 1)
+        return 0;
+    if(board[r - 1][c + 1] != 0 && boardDiscovered[r - 1][c + 1] == 1)
+        return 0;
+    if(board[r + 1][c] == 2 && boardDiscovered[r + 1][c] == 1)
+        return 0;
+    if(board[r - 1][c] == 2 && boardDiscovered[r - 1][c] == 1)
+        return 0;
+    if(board[r][c + 1] == 2 && boardDiscovered[r][c + 1] == 1)
+        return 0;
+    if(board[r][c - 1] == 2 && boardDiscovered[r][c - 1] == 1)
+        return 0;
+    return 1;
 }
 
 int chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int **playerBoard) { //meniul de ales al hartii
@@ -155,6 +176,7 @@ int chooseMap(WINDOW *wnd, int maxrow, int maxcol, int argc, char *argv[], int *
         }
     }
     free(chooseMapText);
+    free(difficultyText);
     return difficulty;
 }
 
@@ -694,7 +716,7 @@ int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **co
     if (win) { //daca a gastigat cineva se afiseaza ecranul de sfarsit
         drawUI(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, pShipsDown, cShipsDown);
         refresh();
-        sleepOwn(1);
+        sleepOwn(3);
         endScreen(win, calculateScore(computerBoard, computerDiscovered), maxrow, maxcol);
         return 0;
     }
@@ -800,26 +822,26 @@ void sleepOwn(int seconds) { //functie de sleep
     while (time(NULL) - a < seconds);
 }
 
-int smartAttack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int *ShipsUp, int *hit, coord *lastHit) { //functie de generare a unui atac random pe harta
+int smartAttack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsDown, int *ShipsUp, int *hit, coord *lastHit) { //functie de generare a unui atac inteligent pe harta
     int r, c;
     if (*hit) {
-        if (!boardDiscovered[lastHit -> row + 1][lastHit -> col] && (lastHit -> row) + 1 <= 10) {
+        if (!boardDiscovered[lastHit -> row + 1][lastHit -> col] && (lastHit -> row) + 1 <= 10 && checkDiag(board, boardDiscovered, (lastHit -> row) + 1, lastHit -> col)) {
             r = (lastHit -> row) + 1;
             c = lastHit -> col;
-        } else if (!boardDiscovered[lastHit -> row - 1][lastHit -> col] && (lastHit -> row) - 1 >= 1) {
+        } else if (!boardDiscovered[lastHit -> row - 1][lastHit -> col] && (lastHit -> row) - 1 >= 1 && checkDiag(board, boardDiscovered, (lastHit -> row) - 1, lastHit -> col)) {
             r = (lastHit -> row) - 1;
             c = lastHit -> col;
-        } else if (!boardDiscovered[lastHit -> row][lastHit -> col + 1] && (lastHit -> col) + 1 <= 10) {
+        } else if (!boardDiscovered[lastHit -> row][lastHit -> col + 1] && (lastHit -> col) + 1 <= 10 && checkDiag(board, boardDiscovered, lastHit -> row, (lastHit -> col) + 1)) {
             r = lastHit -> row;
             c = (lastHit -> col) + 1;
-        } else if (!boardDiscovered[lastHit -> row][lastHit -> col - 1] && (lastHit -> col) - 1 >= 1) {
+        } else if (!boardDiscovered[lastHit -> row][lastHit -> col - 1] && (lastHit -> col) - 1 >= 1 && checkDiag(board, boardDiscovered, lastHit -> row, (lastHit -> col) - 1)) {
             r = lastHit -> row;
             c = (lastHit -> col) - 1;
         } else {
             *hit = 0;
             r = genRandNumber(1, 10);
             c = genRandNumber(1, 10);
-            while (boardDiscovered[r][c]) { //se cauta un punct nedescoperit
+            while (boardDiscovered[r][c] || !checkDiag(board, boardDiscovered, r, c)) { //se cauta un punct nedescoperit
                 r = genRandNumber(1, 10);
                 c = genRandNumber(1, 10);
             }
@@ -827,7 +849,7 @@ int smartAttack(int **board, int **boardDiscovered, int *playerTurn, int *ShipsD
     } else {
         r = genRandNumber(1, 10);
         c = genRandNumber(1, 10);
-        while (boardDiscovered[r][c]) { //se cauta un punct nedescoperit
+        while (boardDiscovered[r][c] || !checkDiag(board, boardDiscovered, r, c)) { //se cauta un punct nedescoperit
             r = genRandNumber(1, 10);
             c = genRandNumber(1, 10);
         }
