@@ -13,15 +13,14 @@ A ncurses library implementaion of the game Battleship
 
 # Cerinta 3:
 	Pentru aceasta cerinta am desenat UI-ul astfel incat player-ul sa vada ce casuta a calculatorului ataca. Folosind aceeasi functie waitForInput() ca la meniul principal redesenez intreagul ecran dupa apasarea unui buton. 
-	Variabila playerTurn retine daca este randul jucatorului de a alege sau nu. Dupa punerea cursorului pe casuta dorita, player-ul apasa ENTER, iar casuta selectata este descoperita. In matricea playerDiscovered se tine cont ce casute din tabla player-ului sunt vizibile pentru calculator, iar in computerDiscovered ce casute poate vedea player-ul.
-Se tine cont de lovituri atunci cand se schimba tura (ex: daca calculatorul sau player-ul loveste o nava primeste o tura in plus.)
+	Variabila playerTurn retine daca este randul jucatorului de a alege sau nu. Dupa punerea cursorului pe casuta dorita, player-ul apasa ENTER, iar casuta selectata este descoperita. In matricea playerDiscovered se tine cont ce casute din tabla player-ului sunt vizibile pentru calculator, iar in computerDiscovered ce casute poate vedea player-ul. Se tine cont de lovituri atunci cand se schimba tura (ex: daca calculatorul sau player-ul loveste o nava primeste o tura in plus.)
 	Mutarea calculatroului se face in functie de dificultatea selectata fie apeland functia attack(), fie functia smartAttack(). Selectarea unei casute de catre computer se face in mod aleator daca este apelata functia attack(). Daca mutarea calculatorului se face prin functia smartAttack(), calculatorul tine cont de ultima lui mutare dupa ce nimereste o nava si incearca sa loveasca in jurul acelui punct. De asemenea, am implementat si o perioada de asteptare dupa mutarea calcultorului de o secunda (3 secunde mi se parea cam mult, iar jocul devenea plictisitor).
 
 # Cerinta 4:
 	Randomize map - se face prin apasarea tastei R si dupa fiecare apasare, navele care nu au fost distruse complet se repozitioneaza pe harta. Acest lucru se realizeaza avand un vector atata pentru jucator cat si pentru computer care retine cate nave si de ce tip nu au fost inca distruse complet. Se sterge toata harta in afara de navele distruse, iar apoi incepe procesul de pozitionare al navelor care nu au fost distruse, retinute in vectorul pShipsUp/cShipsUp.
-Functia corespunzatoare este: randomizeMap()
+    Functia corespunzatoare este: randomizeMap()
 	Destroy in Advance - se face prin apasarea tastei D si apeleaza de 10 ori perechi de atacuri cu functia attack(), verificand de fiecare data daca cineva a castigat. Atacurile sunt generate random si nu tin cont de dificultatea selectata.
-Functia corespunzatoare este: destroyInAdvance()
+    Functia corespunzatoare este: destroyInAdvance()
 
 # Cerinta 5:
 	La terminarea jocului se apeleaza functia endScreen() care arata pe ecran castigatorul si cate puncte a strans jucatorul in acel meci. 
