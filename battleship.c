@@ -17,7 +17,7 @@ int destroyInAdvance(int **playerBoard, int **computerBoard, int **playerDiscove
 void drawBackground(int maxrow, int maxcol);
 void drawLogo(int maxrow, int maxcol, int logoNumber);
 void drawUI(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **computerBoard, int **playerDiscovered, int **computerDiscovered, int *pShipsDown, int *cShipsDown);
-void endScreen(int win, int score, int maxrow, int maxcol);
+void endScreen(int win, int score, int *pShipsDown, int *cShipsDown, int maxrow, int maxcol);
 void generateBoard(int **board);
 int genRandNumber(int intervalStart, int intervalEnd);
 void highscores(int maxrow, int maxcol);
@@ -356,27 +356,34 @@ void drawUI(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **compu
     move(0, 0);
 }
 
-void endScreen(int win, int score, int maxrow, int maxcol) { //functie care deseneaza ecranul de final de joc
+void endScreen(int win, int score, int *pShipsDown, int *cShipsDown, int maxrow, int maxcol) { //functie care deseneaza ecranul de final de joc
     int midrow, midcol, keyPressed = 0, currentLetter = 1;
-    char *scoreText, *letter;
+    char *scoreText, *letter, *pDown, *cDown;
 
     scoreText = malloc(30 * sizeof(char));
+    pDown = malloc(30 * sizeof(char));
+    cDown = malloc(30 * sizeof(char));
     letter = malloc(5 * sizeof(char));
     letter[1] = letter[2] = letter[3] = 'A';
     letter[4] = '\0';
     sprintf(scoreText, "Player score: %d", score);
+    sprintf(pDown, "Player ships taken down: %d", *pShipsDown);
+    sprintf(cDown, "Computer ships taken down: %d", *cShipsDown);
     midrow = maxrow / 2;
     midcol = maxcol / 2;
     while (keyPressed != 5) {
         drawBackground(maxrow, maxcol);
         attron(COLOR_PAIR(1));
         if (win == 1) //afiseaza text in functie de castigator
-            mvprintw(midrow - 4, midcol - strlen("Player won!") / 2, "Player won!");
+            mvprintw(midrow - 6, midcol - strlen("Player won!") / 2, "Player won!");
         else
-            mvprintw(midrow - 4, midcol - strlen("Computer won!") / 2, "Computer won!");
+            mvprintw(midrow - 6, midcol - strlen("Computer won!") / 2, "Computer won!");
         attron(COLOR_PAIR(5));
-        mvprintw(midrow - 3, midcol - strlen(scoreText) / 2, scoreText);
-        mvprintw(midrow - 1, midcol - strlen("Please enter your name: ") / 2, "Please enter your name: ");
+        mvprintw(maxrow - 1, 0, "Side arrows - Navigate letters | Up and Down arrows - Change letter");
+        mvprintw(midrow - 5, midcol - strlen(scoreText) / 2, scoreText);
+        mvprintw(midrow - 3, midcol - strlen(pDown) / 2, pDown);
+        mvprintw(midrow - 2, midcol - strlen(cDown) / 2, cDown);
+        mvprintw(midrow, midcol - strlen("Please enter your name: ") / 2, "Please enter your name: ");
         switch (keyPressed) { //decizie in functie de tasta apasata
         case 1: //Up-Arrow
             if (letter[currentLetter] == 'A')
@@ -396,10 +403,10 @@ void endScreen(int win, int score, int maxrow, int maxcol) { //functie care dese
                 currentLetter--;
             break;
         }
-        mvaddch(midrow, midcol - 2, letter[1]);
-        mvaddch(midrow, midcol, letter[2]);
-        mvaddch(midrow, midcol + 2, letter[3]);
-        move(midrow, midcol - 4 + 2 * currentLetter);
+        mvaddch(midrow + 1, midcol - 2, letter[1]);
+        mvaddch(midrow + 1, midcol, letter[2]);
+        mvaddch(midrow + 1, midcol + 2, letter[3]);
+        move(midrow + 1, midcol - 4 + 2 * currentLetter);
         if (keyPressed != 0)
             keyPressed = waitForInput();
         else {
@@ -717,7 +724,7 @@ int resumeGame(WINDOW * wnd, int maxrow, int maxcol, int **playerBoard, int **co
         drawUI(wnd, maxrow, maxcol, playerBoard, computerBoard, playerDiscovered, computerDiscovered, pShipsDown, cShipsDown);
         refresh();
         sleepOwn(3);
-        endScreen(win, calculateScore(computerBoard, computerDiscovered), maxrow, maxcol);
+        endScreen(win, calculateScore(computerBoard, computerDiscovered), pShipsDown, cShipsDown, maxrow, maxcol);
         return 0;
     }
     return 1;
