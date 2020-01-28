@@ -1,5 +1,8 @@
 # battleship
 A ncurses library implementaion of the game Battleship
+*Install ncurses on Ubuntu/Debian: sudo apt-get install libncurses5-dev
+*Compile source code: gcc -o battleship battleship.c -lcurses
+*Run the game: ./battleship map1.conf map2.conf map3.conf
 
 # Cerinta 1:
 	Am construit un meniu cu 4 butoane (New Game, Continue, Scores, Quit) care se apeleaza din main ca functia mainMenu(...). Acest meniu functioneaza cu ajutorul functiei waitForInput() care a fost implmentata astfel incat sa returneze un cod pentru fiecare tasta apasata (ex: Sageata sus returneaza 1, Q returneaza 6). In functie de ce apasa utilizatorul de la tastatura, meniul se redeseneaza corespunzator. La apasarea tastei enter functia mainMenu() apeleaza alta functie corespunzatoare butonului care era selectat.
