@@ -1,6 +1,7 @@
 # battleship
 A ncurses library implementaion of the game Battleship
 *Install ncurses on Ubuntu/Debian: sudo apt-get install libncurses5-dev
+*Install gcc compiler: sudo apt-get install gcc
 *Compile source code: gcc -o battleship battleship.c -lcurses
 *Run the game: ./battleship map1.conf map2.conf map3.conf
 
